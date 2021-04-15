@@ -1,4 +1,9 @@
-import { Module } from '@nestjs/common';
+import {
+  MiddlewareConsumer,
+  Module,
+  NestModule,
+  RequestMethod,
+} from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from './user/user.module';
@@ -7,7 +12,8 @@ import { TransactionModule } from './transaction/transaction.module';
 import { CartModule } from './cart/cart.module';
 import { WishlistModule } from './wishlist/wishlist.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from './user/entities/user.entity';
+import { getConnectionOptions } from 'typeorm';
+import { LoggerMiddleware } from './shared/middlewares';
 
 const ApplicationModule = [
   UserModule,
@@ -18,21 +24,26 @@ const ApplicationModule = [
 ];
 
 const VendorModule = [
-  TypeOrmModule.forRoot({
-    type: 'mysql',
-    host: 'localhost',
-    port: 3306,
-    username: 'root',
-    password: '',
-    database: 'flower',
-    entities: [User],
-    synchronize: true,
+  TypeOrmModule.forRootAsync({
+    useFactory: async () =>
+      Object.assign(await getConnectionOptions(), {
+        autoLoadEntities: true,
+      }),
   }),
 ];
 
 @Module({
-  imports: [...ApplicationModule, ...VendorModule],
+  imports: [...VendorModule, ...ApplicationModule],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): any {
+    consumer
+      .apply(LoggerMiddleware)
+      .forRoutes(
+        { path: 'user', method: RequestMethod.GET },
+        { path: 'user', method: RequestMethod.POST },
+      );
+  }
+}
