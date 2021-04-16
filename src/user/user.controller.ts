@@ -7,13 +7,15 @@ import {
   Param,
   Delete,
   UseInterceptors,
-  ClassSerializerInterceptor,
+  ClassSerializerInterceptor, UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ResponseHelper, BcryptHelper } from '../shared/helpers';
+import { JwtAuthGuard } from '../shared/guards';
 
+@UseGuards(JwtAuthGuard)
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
