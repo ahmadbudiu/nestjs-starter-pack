@@ -15,7 +15,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { getConnectionOptions } from 'typeorm';
 import { LoggerMiddleware } from './shared/middlewares';
 import { AuthModule } from './auth/auth.module';
-import { SharedModule } from './shared/modules/shared.module';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 const ApplicationModule = [
   UserModule,
@@ -33,12 +34,22 @@ const VendorModule = [
         autoLoadEntities: true,
       }),
   }),
+  ThrottlerModule.forRoot({
+    ttl: 60,
+    limit: 10,
+  }),
 ];
 
 @Module({
-  imports: [...VendorModule, ...ApplicationModule, SharedModule],
+  imports: [...VendorModule, ...ApplicationModule],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): any {
