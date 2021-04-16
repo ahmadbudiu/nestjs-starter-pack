@@ -14,6 +14,8 @@ import { WishlistModule } from './wishlist/wishlist.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { getConnectionOptions } from 'typeorm';
 import { LoggerMiddleware } from './shared/middlewares';
+import { AuthModule } from './auth/auth.module';
+import { SharedModule } from './shared/modules/shared.module';
 
 const ApplicationModule = [
   UserModule,
@@ -21,6 +23,7 @@ const ApplicationModule = [
   TransactionModule,
   CartModule,
   WishlistModule,
+  AuthModule,
 ];
 
 const VendorModule = [
@@ -33,7 +36,7 @@ const VendorModule = [
 ];
 
 @Module({
-  imports: [...VendorModule, ...ApplicationModule],
+  imports: [...VendorModule, ...ApplicationModule, SharedModule],
   controllers: [AppController],
   providers: [AppService],
 })
