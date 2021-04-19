@@ -8,6 +8,6 @@ async function bootstrap() {
   app.enableCors();
   app.use(cookieParser('asdasd'));
   app.use(csurf({ cookie: { key: '_csrf', sameSite: true } }));
-  await app.listen(3000);
+  await app.listen(process.env.PORT);
 }
 bootstrap();
