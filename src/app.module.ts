@@ -16,6 +16,10 @@ import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
+import { MailerModule } from '@nestjs-modules/mailer';
+import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import { EmailService } from './shared/services';
+import * as path from 'path';
 
 const ApplicationModule = [UserModule, AuthModule];
 
@@ -46,30 +50,66 @@ const VendorModule = [
   ConfigModule.forRoot({
     envFilePath: '.env',
   }),
-  WinstonModule.forRoot({
-    transports: [
-      new winston.transports.File({
-        level: 'error',
-        filename: 'logs/' + now + '-error.log',
-        format: winston.format.combine(
-          winston.format.label({ label: 'flower' }),
-          winston.format.timestamp(),
-          winston.format.printf(({ level, message, label, timestamp }) => {
-            return `${timestamp} [${label}] ${level}: ${message}`;
+  WinstonModule.forRootAsync({
+    useFactory: async () => {
+      return {
+        transports: [
+          new winston.transports.File({
+            level: 'error',
+            filename: path.join(__dirname, 'logs', now + '-error.log'),
+            format: winston.format.combine(
+              winston.format.label({ label: 'flower' }),
+              winston.format.timestamp(),
+              winston.format.printf(({ level, message, label, timestamp }) => {
+                return `${timestamp} [${label}] ${level}: ${message}`;
+              }),
+            ),
           }),
-        ),
-      }),
-      new winston.transports.File({
-        filename: 'logs/' + now + '-access.log',
-        format: winston.format.combine(
-          winston.format.label({ label: 'flower' }),
-          winston.format.timestamp(),
-          winston.format.printf(({ level, message, label, timestamp }) => {
-            return `${timestamp} [${label}] ${level}: ${message}`;
+          new winston.transports.File({
+            filename: path.join(__dirname, 'logs', now + '-access.log'),
+            format: winston.format.combine(
+              winston.format.label({ label: 'flower' }),
+              winston.format.timestamp(),
+              winston.format.printf(({ level, message, label, timestamp }) => {
+                return `${timestamp} [${label}] ${level}: ${message}`;
+              }),
+            ),
           }),
-        ),
-      }),
-    ],
+        ],
+      };
+    },
+  }),
+  MailerModule.forRootAsync({
+    useFactory: async () => {
+      return {
+        transport:
+          process.env.MAIL_DRIVER +
+          '://' +
+          process.env.MAIL_USERNAME +
+          ':' +
+          process.env.MAIL_PASSWORD +
+          '@' +
+          process.env.MAIL_HOST,
+        defaults: {
+          from: process.env.MAIL_FROM,
+        },
+        template: {
+          dir: path.join(process.cwd(), 'dist/views/mail'),
+          adapter: new HandlebarsAdapter(),
+          options: {
+            strict: true,
+          },
+        },
+        options: {
+          partials: {
+            dir: path.join(process.cwd(), 'dist/views/mail'),
+            options: {
+              strict: true,
+            },
+          },
+        },
+      };
+    },
   }),
 ];
 
@@ -78,6 +118,7 @@ const VendorModule = [
   controllers: [AppController],
   providers: [
     AppService,
+    EmailService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
